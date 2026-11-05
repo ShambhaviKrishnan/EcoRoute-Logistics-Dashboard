@@ -38,6 +38,7 @@ export interface OptimizeRouteResponse {
   carbon_emissions_kg: number
   recommended_vehicle_type: VehicleType
   eco_score: number
+  source?: 'server_cache' | 'live_network_compute'
 }
 
 export const INITIAL_VEHICLES: Vehicle[] = [

@@ -13,6 +13,15 @@ type Bindings = {
   DB?: D1Database
 }
 
+interface RouteCacheEntry {
+  data: OptimizeRouteResponse
+  timestamp: number
+}
+
+// 1. In-Memory Cache Store for route calculation results (5-minute TTL = 300,000 ms)
+const ROUTE_CACHE_TTL_MS = 300_000
+const routeOptimizationCache = new Map<string, RouteCacheEntry>()
+
 const app = new Hono<{ Bindings: Bindings }>()
 
 // Enable CORS for all API routes
@@ -189,6 +198,19 @@ app.post('/api/optimize-route', async (c) => {
     )
   }
 
+  // 2. Unique Cache Key Structure: `${origin.trim().toLowerCase()}-${destination.trim().toLowerCase()}-${weight_kg}`
+  const cacheKey = `${origin.trim().toLowerCase()}-${destination.trim().toLowerCase()}-${weightKg}`
+  const now = Date.now()
+  const cachedEntry = routeOptimizationCache.get(cacheKey)
+
+  // 3. Validation & TTL (Time-To-Live: 5 minutes / 300,000 ms)
+  if (cachedEntry && now - cachedEntry.timestamp < ROUTE_CACHE_TTL_MS) {
+    return c.json({
+      ...cachedEntry.data,
+      source: 'server_cache'
+    })
+  }
+
   // Compute deterministic route distance from origin/destination strings
   const routeKey = `${origin.toLowerCase()}->${destination.toLowerCase()}`
   let hash = 0
@@ -242,7 +264,7 @@ app.post('/api/optimize-route', async (c) => {
     )
   )
 
-  const result: OptimizeRouteResponse = {
+  const computedPayload: OptimizeRouteResponse = {
     origin,
     destination,
     weight_kg: weightKg,
@@ -253,7 +275,16 @@ app.post('/api/optimize-route', async (c) => {
     eco_score
   }
 
-  return c.json(result)
+  // Store computed result alongside fresh timestamp in the server-side cache Map
+  routeOptimizationCache.set(cacheKey, {
+    data: computedPayload,
+    timestamp: now
+  })
+
+  return c.json({
+    ...computedPayload,
+    source: 'live_network_compute'
+  })
 })
 
 // Health / root status route for backend verification
