@@ -287,18 +287,31 @@ app.post('/api/optimize-route', async (c) => {
   })
 })
 
-// Health / root status route for backend verification
+// Root route serving the EcoRoute React + Tailwind CSS + Lucide React Enterprise Dashboard
 app.get('/', async (c) => {
   await ensureDatabaseSeeded(c.env?.DB)
-  return c.json({
-    service: 'EcoRoute Logistics & Fleet Optimization API',
-    status: 'online',
-    endpoints: [
-      'GET /api/vehicles',
-      'GET /api/weather?lat={lat}&lng={lng}',
-      'POST /api/optimize-route'
-    ]
-  })
+  return c.html(`<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>EcoRoute — Enterprise Logistics & Fleet Optimization</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script type="importmap">
+    {
+      "imports": {
+        "react": "https://esm.sh/react@18.3.1",
+        "react-dom/client": "https://esm.sh/react-dom@18.3.1/client",
+        "lucide-react": "https://esm.sh/lucide-react@0.460.0?external=react"
+      }
+    }
+  </script>
+</head>
+<body class="bg-slate-950 text-slate-100 antialiased selection:bg-emerald-500 selection:text-slate-950">
+  <div id="root"></div>
+  <script type="module" src="/static/app.js"></script>
+</body>
+</html>`)
 })
 
 export default app
